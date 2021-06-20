@@ -6,6 +6,7 @@ from tensorflow.keras import layers
 import multiprocessing as mp
 import pickle
 import os
+from sys import platform
 
 from SimulatorDriverClass import SimulatorDriver
 from ProcessedImageEnvironmentClass import ProcessedImageEnvironment
@@ -14,6 +15,8 @@ from ProcessedImageEnvironmentClass import ProcessedImageEnvironment
 
 
 if __name__ == '__main__':
+    if platform == 'linux' or platform == 'linux2':
+        mp.set_start_method('spawn')
     mp.freeze_support()
 
     # Configuration parameters for the whole setup
