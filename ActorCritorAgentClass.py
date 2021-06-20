@@ -33,7 +33,7 @@ if __name__ == '__main__':
     inputs = layers.Input(shape=(num_inputs,))
     common = layers.Dense(64, activation="relu")(inputs)
     common = layers.Dense(64, activation="relu")(common)
-    action = layers.Dens(8, activation="relu")(common)
+    action = layers.Dense(8, activation="relu")(common)
     action = layers.Dense(num_actions, activation="softmax")(action)
     critic = layers.Dense(4)(common)
     critic = layers.Dense(1)(critic)
