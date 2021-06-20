@@ -30,12 +30,14 @@ class ProcessedImageEnvironment():
         self.lastObservation = None
         self.lastCenterDeviation = 0.0
         self.centerDeviationUnobservableTimes = 0
+        self.zeroSpeedTimes = 0
 
 
     def reset(self):
         # Todo: Implementation
         self.lastCenterDeviation = 0.0
         self.centerDeviationUnobservableTimes = 0
+        self.zeroSpeedTimes = 0
         self.simulatorDriver.restart()
         steering_angle_after, throttle_after, speed_after, image_after = self.simulatorDriver.sendActionAndGetRawObservation(0.0, 0.01)
         centerDeviation = self.centerDeviationDetector.getCenterDeviation(image_after)
@@ -74,17 +76,24 @@ class ProcessedImageEnvironment():
             self.centerDeviationUnobservableTimes += 1
         else:
             self.centerDeviationUnobservableTimes = 0
+        if speed_after <= 1e-3:
+            self.zeroSpeedTimes += 1
+        else:
+            self.zeroSpeedTimes = 0
         # centerDeviation = 0.0
         observation = np.array([centerDeviation, steering_angle_after, throttle_after, speed_after])
         self.lastObservation = observation
         self.lastCenterDeviation = centerDeviation
 
         # calculate reward
-        reward = 0.9 - np.abs(centerDeviation)
+        reward = speed_after - np.abs(centerDeviation)
 
         # check done
         if self.centerDeviationUnobservableTimes >= 10:
             isDone = True
+        elif self.zeroSpeedTimes >= 5:
+            isDone = True
+            reward = -10
 
         # print(f"action = {action} -> obs = {observation}, reward = {reward}, isDone = {isDone}")
         return observation, reward, isDone

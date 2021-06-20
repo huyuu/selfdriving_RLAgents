@@ -29,6 +29,7 @@ from time import sleep
 import multiprocessing as mp
 import queue
 from sys import platform
+from matplotlib import pyplot as pl
 
 
 class SimulatorDriver():
@@ -77,7 +78,12 @@ class SimulatorDriver():
         # get first observation
         observation = 0
         for i in range(10):
-            self.sendActionAndGetRawObservation(0.0, 1.0)
+            self.sendActionWithoutFeedback(0.0, 1.0)
+
+    def backToMenu(self):
+        # Press and release esc
+        self.keyboard.press(pp.keyboard.Key.esc)
+        self.keyboard.release(pp.keyboard.Key.esc)
 
 
     def sendActionAndGetRawObservation(self, steering_angle, throttle):
@@ -106,7 +112,7 @@ class SimulatorDriver():
         # while self.observationQueue.empty():
         #     sleep(0.001)
         # print("__; getting observation ...")
-        observation = self.observationQueue.get(block=True, timeout=5)
+        observation = self.observationQueue.get(block=True, timeout=10)
         # print(f"__; got observation.")
         return observation
 

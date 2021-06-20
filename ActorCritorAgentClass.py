@@ -34,12 +34,10 @@ if __name__ == '__main__':
     num_inputs = 4
     num_actions = 3
     inputs = layers.Input(shape=(num_inputs,))
-    common = layers.Dense(64, activation="relu")(inputs)
-    common = layers.Dense(64, activation="relu")(common)
-    action = layers.Dense(8, activation="relu")(common)
-    action = layers.Dense(num_actions, activation="softmax")(action)
-    critic = layers.Dense(4)(common)
-    critic = layers.Dense(1)(critic)
+    common = layers.Dense(16, activation="relu")(inputs)
+    common = layers.Dense(16, activation="relu")(common)
+    action = layers.Dense(num_actions, activation="softmax")(common)
+    critic = layers.Dense(1)(common)
 
 
     # num_actions = 3
@@ -102,6 +100,7 @@ if __name__ == '__main__':
                 episode_reward += reward
 
                 if done:
+                    env.simulatorDriver.backToMenu()
                     break
 
             # Update running reward to check condition for solving
