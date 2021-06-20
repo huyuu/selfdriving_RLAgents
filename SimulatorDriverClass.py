@@ -28,6 +28,7 @@ import pynput as pp
 from time import sleep
 import multiprocessing as mp
 import queue
+from sys import platform
 
 
 class SimulatorDriver():
@@ -38,6 +39,16 @@ class SimulatorDriver():
         # https://pypi.org/project/pynput/
         self.keyboard = pp.keyboard.Controller()
         self.mouse = pp.mouse.Controller()
+        # https://stackoverflow.com/questions/8220108/how-do-i-check-the-operating-system-in-python/46629115
+        self.mouseStartPosition = None
+        if platform == 'linux' or platform == 'linux2':
+            self.mouseStartPosition = (972, 684)
+        elif platform == 'win32':
+            self.mouseStartPosition = (640, 451)
+        elif platform == 'darwin':
+            self.mouseStartPosition = (640, 451)
+        else:
+            self.mouseStartPosition = (640, 451)
 
         self.actionQueue = mp.Queue(maxsize=1)
         self.observationQueue = mp.Queue(maxsize=1)
@@ -60,7 +71,7 @@ class SimulatorDriver():
         self.keyboard.press(pp.keyboard.Key.esc)
         self.keyboard.release(pp.keyboard.Key.esc)
         # mouse click
-        self.mouse.position = (640, 451)
+        self.mouse.position = self.mouseStartPosition
         self.mouse.press(pp.mouse.Button.left)
         self.mouse.release(pp.mouse.Button.left)
         # get first observation
