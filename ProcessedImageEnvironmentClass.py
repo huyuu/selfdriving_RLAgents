@@ -15,7 +15,7 @@ class ProcessedImageEnvironment():
             'maxValue': 1.0,
         }
         self.action_spec = {
-            'shape': (3,), # left, break, right
+            'shape': (4,), # left, right, straight, break
             'dtype': np.float,
             'minValue': 0.0,
             'maxValue': 1.0,
@@ -60,6 +60,8 @@ class ProcessedImageEnvironment():
             steering_angle_before, throttle_before = [-0.1, 1.0]
         elif action == 1: # turn right
             steering_angle_before, throttle_before = [0.1, 1.0]
+        elif action == 2: # go straight
+            steering_angle_before, throttle_before = [0.0, 1.0]
         else: # break
             steering_angle_before, throttle_before = [0.0, 0.0]
         # get observation

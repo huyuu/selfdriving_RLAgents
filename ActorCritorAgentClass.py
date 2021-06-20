@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
     # Configuration parameters for the whole setup
     seed = 42
-    gamma = 0.99  # Discount factor for past rewards
+    # gamma = 0.99  # Discount factor for past rewards
     max_steps_per_episode = int(1e5)
     # env = gym.make("CartPole-v0")  # Create the environment
     # env.seed(seed)
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     # MARK: - Model Configuration
 
     num_inputs = 4
-    num_actions = 3
+    num_actions = 4
     inputs = layers.Input(shape=(num_inputs,))
     common = layers.Dense(16, activation="relu")(inputs)
     common = layers.Dense(16, activation="relu")(common)
@@ -72,6 +72,9 @@ if __name__ == '__main__':
     episode_count = 0
     records = []
     gamma = 0.95
+    epsilon_decay_episode = 200
+    epsilon = 1.0
+    epsilon_decay_rate = (epsilon - 0.05) / 200
 
     while running_reward < 2000:  # Run until solved
         state = env.reset()
@@ -153,6 +156,11 @@ if __name__ == '__main__':
             action_probs_history.clear()
             critic_value_history.clear()
             rewards_history.clear()
+
+            if episode_count >= 200:
+                epsilon = 0.05
+            else:
+                epsilon -= epsilon_decay_rate
 
         # Log details
         episode_count += 1
