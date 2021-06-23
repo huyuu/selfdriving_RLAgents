@@ -30,6 +30,7 @@ import multiprocessing as mp
 import queue
 from sys import platform
 from matplotlib import pyplot as pl
+from datetime import datetime
 
 
 class SimulatorDriver():
@@ -84,6 +85,10 @@ class SimulatorDriver():
         # Press and release esc
         self.keyboard.press(pp.keyboard.Key.esc)
         self.keyboard.release(pp.keyboard.Key.esc)
+        self.mouse.position = (1, 1)
+        print(f"start sleeping ... {datetime.now()}")
+        sleep(1)
+        print(f"end sleeping ... {datetime.now()}")
 
 
     def sendActionAndGetRawObservation(self, steering_angle, throttle):

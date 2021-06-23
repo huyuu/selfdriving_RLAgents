@@ -9,7 +9,7 @@ from CenterDeviationDetectorClass import CenterDeviationDetector
 class ProcessedImageEnvironment():
     def __init__(self):
         self.observation_spec = {
-            'shape': (4,), # delta from center line, speed (clipped to [0, 1]), steering angle
+            'shape': (4,), # delta from center line, speed (clipped to [0, 1]), steering angle, throttle
             'dtype': np.float,
             'minValue': -1.0,
             'maxValue': 1.0,
@@ -31,6 +31,7 @@ class ProcessedImageEnvironment():
         self.lastCenterDeviation = 0.0
         self.centerDeviationUnobservableTimes = 0
         self.zeroSpeedTimes = 0
+        self.continuousOffCourseTimes = 0
 
 
     def reset(self):
@@ -38,6 +39,7 @@ class ProcessedImageEnvironment():
         self.lastCenterDeviation = 0.0
         self.centerDeviationUnobservableTimes = 0
         self.zeroSpeedTimes = 0
+        self.continuousOffCourseTimes = 0
         self.simulatorDriver.restart()
         steering_angle_after, throttle_after, speed_after, image_after = self.simulatorDriver.sendActionAndGetRawObservation(0.0, 0.01)
         centerDeviation = self.centerDeviationDetector.getCenterDeviation(image_after)
@@ -46,7 +48,7 @@ class ProcessedImageEnvironment():
         observation = np.array([centerDeviation, steering_angle_after, throttle_after, speed_after])
 
         # observation = np.zeros(4)
-        self.lastCenterDeviation = observation
+        self.lastCenterDeviation = centerDeviation
         return observation
 
 
@@ -54,6 +56,7 @@ class ProcessedImageEnvironment():
         observation = None
         reward = None
         isDone = False
+        collideReward = -100
         # calculate action
         steering_angle_before, throttle_before = [0.0, 0.0]
         if action == 0: # turn left
@@ -69,7 +72,7 @@ class ProcessedImageEnvironment():
             steering_angle_after, throttle_after, speed_after, image_after = self.simulatorDriver.sendActionAndGetRawObservation(steering_angle_before, throttle_before)
         except queue.Empty as error:
             isDone = True
-            return self.lastObservation, -10, True
+            return self.lastObservation, collideReward, True
         # calculate center deviation
         centerDeviation = self.centerDeviationDetector.getCenterDeviation(image_after)
         # print(f"{centerDeviation}, {self.lastCenterDeviation}")
@@ -82,27 +85,35 @@ class ProcessedImageEnvironment():
             self.zeroSpeedTimes += 1
         else:
             self.zeroSpeedTimes = 0
+        if abs(centerDeviation) >= 0.5:
+            self.continuousOffCourseTimes += 1
+        else:
+            self.continuousOffCourseTimes = 0
         # centerDeviation = 0.0
+        # assert centerDeviation != None
         observation = np.array([centerDeviation, steering_angle_after, throttle_after, speed_after])
         self.lastObservation = observation
         self.lastCenterDeviation = centerDeviation
 
         # calculate reward
-        reward = speed_after - np.abs(centerDeviation)
+        reward = min(speed_after, 0.3) - abs(centerDeviation)
 
         # check done
         if self.centerDeviationUnobservableTimes >= 10:
             isDone = True
+            reward = collideReward
+        elif self.continuousOffCourseTimes >= 5:
+            print("offCourse!!!")
+            isDone = True
+            reward = collideReward
         elif self.zeroSpeedTimes >= 5:
             isDone = True
-            reward = -10
+            reward = collideReward
+        else:
+            isDone = False
 
         # print(f"action = {action} -> obs = {observation}, reward = {reward}, isDone = {isDone}")
         return observation, reward, isDone
-
-
-    # MARK: - Private Methods
-
 
 
 if __name__ == '__main__':
