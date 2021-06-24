@@ -87,7 +87,7 @@ class SimulatorDriver():
         self.keyboard.release(pp.keyboard.Key.esc)
         self.mouse.position = (1, 1)
         print(f"start sleeping ... {datetime.now()}")
-        sleep(1)
+        sleep(3)
         print(f"end sleeping ... {datetime.now()}")
 
 

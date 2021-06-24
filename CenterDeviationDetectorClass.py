@@ -46,6 +46,8 @@ class CenterDeviationDetector():
                     else:
                         right = min(x2, right)
                 # cv2.line(image_trimmed, (x1,y1), (x2,y2), (255, 0, 0), 2)
+            if right == 320 and left == 0:
+                return None
             roadCenter = int((right + left)/2)
             roadHalfWidth = (right - left)/2
             gap = (160 - roadCenter) / roadHalfWidth
@@ -132,6 +134,8 @@ class CenterDeviationDetector():
                     else:
                         right = min(x2, right)
                 # cv2.line(image_trimmed, (x1,y1), (x2,y2), (255, 0, 0), 2)
+            if right == 320 and left == 0:
+                return None, image_origin
             roadCenter = int((right + left)/2)
             roadHalfWidth = (right - left)/2
             gap = (160 - roadCenter) / roadHalfWidth
