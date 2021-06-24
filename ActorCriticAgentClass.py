@@ -71,9 +71,9 @@ if __name__ == '__main__':
     running_reward = 0
     gradient_descent_count = 0
     records = []
-    gamma = 0.1
+    gamma = 0.9
     episodes_amount_needed_for_one_decent = 3
-    entropy_beta = 0.01
+    entropy_beta = 1.0
 
     while running_reward < 2000:  # Run until solved
         episode_count_in_single_descent = 1
@@ -135,9 +135,9 @@ if __name__ == '__main__':
             # returns = np.array(returns)
             # returns = (returns - np.mean(returns)) / (np.std(returns) + eps)
             # returns = returns.tolist()
-            # discounted_rewards_history = np.array(discounted_rewards_history)
-            # discounted_rewards_history = (discounted_rewards_history - np.mean(discounted_rewards_history)) / (np.std(discounted_rewards_history) + eps)
-            # discounted_rewards_history = discounted_rewards_history.tolist()
+            discounted_rewards_history = np.array(discounted_rewards_history)
+            discounted_rewards_history = (discounted_rewards_history - np.mean(discounted_rewards_history)) / (np.std(discounted_rewards_history) + eps)
+            discounted_rewards_history = discounted_rewards_history.tolist()
 
             # Calculating loss values to update our network
             # history = zip(action_probs_history, critic_value_history, returns)
@@ -153,7 +153,9 @@ if __name__ == '__main__':
                 log_prob = tf.math.log(prob)
                 diff = ret - value
                 policy_loss = -log_prob * diff
-                entropy_loss = -( prob * log_prob) * entropy_beta
+                entropy_loss = ( prob * log_prob) * entropy_beta
+                print(f"policy_loss: {policy_loss}")
+                print(f"entropy_loss: {entropy_loss}")
                 actor_losses.append(policy_loss + entropy_loss)  # actor loss
 
                 # The critic must be updated so that it predicts a better estimate of
@@ -163,7 +165,7 @@ if __name__ == '__main__':
                 )
 
             # Backpropagation
-            loss_value = sum(actor_losses) + sum(critic_losses)
+            loss_value = sum(actor_losses)/len(actor_losses) + sum(critic_losses)/len(critic_losses)
             grads = tape.gradient(loss_value, model.trainable_variables)
             optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
