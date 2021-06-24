@@ -73,6 +73,7 @@ if __name__ == '__main__':
     records = []
     gamma = 0.1
     episodes_amount_needed_for_one_decent = 3
+    entropy_beta = 0.01
 
     while running_reward < 2000:  # Run until solved
         episode_count_in_single_descent = 1
@@ -96,7 +97,8 @@ if __name__ == '__main__':
 
                     # Sample action from action probability distribution
                     action = np.random.choice(num_actions, p=np.squeeze(action_probs))
-                    action_probs_history.append(tf.math.log(action_probs[0, action]))
+                    # action_probs_history.append(tf.math.log(action_probs[0, action]))
+                    action_probs_history.append(action_probs[0, action])
 
                     # Apply the sampled action in our environment
                     state, reward, done, myAction = env.step(action)
@@ -142,14 +144,17 @@ if __name__ == '__main__':
             history = zip(action_probs_history, critic_value_history, discounted_rewards_history)
             actor_losses = []
             critic_losses = []
-            for log_prob, value, ret in history:
+            for prob, value, ret in history:
                 # At this point in history, the critic estimated that we would get a
                 # total reward = `value` in the future. We took an action with log probability
                 # of `log_prob` and ended up recieving a total reward = `ret`.
                 # The actor must be updated so that it predicts an action that leads to
                 # high rewards (compared to critic's estimate) with high probability.
+                log_prob = tf.math.log(prob)
                 diff = ret - value
-                actor_losses.append(-log_prob * diff)  # actor loss
+                policy_loss = -log_prob * diff
+                entropy_loss = -( prob * log_prob) * entropy_beta
+                actor_losses.append(policy_loss + entropy_loss)  # actor loss
 
                 # The critic must be updated so that it predicts a better estimate of
                 # the future rewards.
