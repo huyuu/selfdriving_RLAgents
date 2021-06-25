@@ -52,16 +52,21 @@ if __name__ == '__main__':
     # common2 = layers.Dense(128, activation="relu", name='common2')(common1)
     # action = layers.Dense(num_actions, activation="softmax", name='action')(common2)
 
-    num_inputs = env.observation_space.shape
-    num_actions = env.action_space.n
-    inputs = layers.Input(shape=num_inputs, name='input')
-    common_conv1 = layers.Conv2D(filters=32, kernel_size=8, strides=(4, 4), activation='relu', name='common_conv1')(inputs)
-    common_conv2 = layers.Conv2D(filters=32, kernel_size=8, strides=(4, 4), activation='relu', name='common_conv2')(common_conv1)
-    common_conv3 = layers.Conv2D(filters=32, kernel_size=8, strides=(4, 4), activation='relu', name='common_conv3')(common_conv2)
-    common_flattened = layers.flatten(name='flattened')(common_conv3)
-    common_dense1 = layers.Dense(64, activation='relu', name='common_dense1')(common_flattened)
+    num_actions = env.action_spec.shape[0]
+    image_inputs = layers.Input(shape=env.observation_spec['image']['shape'], name='image_input')
+    image_conv1 = layers.Conv2D(filters=32, kernel_size=8, strides=(4, 4), activation='relu', name='image_conv1')(image_inputs)
+    image_conv2 = layers.Conv2D(filters=32, kernel_size=8, strides=(4, 4), activation='relu', name='image_conv2')(image_conv1)
+    image_conv3 = layers.Conv2D(filters=32, kernel_size=8, strides=(4, 4), activation='relu', name='image_conv3')(image_conv2)
+    image_flattened = layers.flatten(name='flattened')(image_conv3)
+    image_dense1 = layers.Dense(64, activation='relu', name='common_dense1')(image_flattened)
+    image_dense2 = layers.Dense(4, activation='relu', name='common_dense2')(image_dense1)
 
-    action_dense1 = layers.Dense(16, activation="relu", name='action_dense1')(common_dense1)
+    subPara_inputs = layers.Input(shape=env.observation_spec['subPara']['shape'], name='subPara_input')
+    subPara_dense = layers.Dense(4, activation='relu', name='subPara_dense')(subPara_inputs)
+
+    common = layers.concatenate([image_dense2, subPara_dense])
+
+    action_dense1 = layers.Dense(16, activation="relu", name='action_dense1')(common)
     action = layers.Dense(num_actions, activation="softmax", name='action_dense2')(action_dense1)
 
 

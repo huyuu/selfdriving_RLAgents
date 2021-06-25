@@ -2,6 +2,8 @@ import numpy as np
 import pynput as pp
 import queue
 from datetime import datetime
+import gym
+from gym import spaces
 
 from SimulatorDriverClass import SimulatorDriver
 
@@ -13,7 +15,7 @@ class RawImageEnvironment():
                 'shape': (160, 320, 3), # delta from center line, speed (clipped to [0, 1]), steering angle
                 'dtype': np.int32,
                 'minValue': 0,
-                'maxValue': 1
+                'maxValue': 255
             },
             'subPara': {
                 'shape': (3,), # delta from center line, speed (clipped to [0, 1]), steering angle
