@@ -3,7 +3,7 @@ from matplotlib import pyplot as pl
 import pickle
 
 
-modelDirPath = './savedModels/ReinforcementKerasPretrained'
+modelDirPath = './savedModels/ReinforcementKeras'
 with open(f'{modelDirPath}/record.pickle', 'rb') as file:
     results = pickle.load(file)
 

@@ -34,7 +34,7 @@ if __name__ == '__main__':
     # env = gym.make("CartPole-v0")  # Create the environment
     # env.seed(seed)
     # env = FixPolicyEnvironment()
-    env = gym.make('FixPolicy-v0')
+    env = gym.make('ProcessedImage-v0')
     eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 
 
@@ -74,7 +74,6 @@ if __name__ == '__main__':
         model = keras.Model(inputs=inputs, outputs=action)
 
 
-
     # MARK: - Training
 
     optimizer = keras.optimizers.Adam(learning_rate=1e-2)
@@ -86,28 +85,29 @@ if __name__ == '__main__':
     running_reward = 0
     gradient_descent_count = 0
     records = []
-    gamma = 0.1
-    episodes_amount_needed_for_one_decent = 3
+    gamma = 0.95
+    episodes_amount_needed_for_one_decent = 5
     entropy_beta = 1.0
 
     while running_reward < 2000:  # Run until solved
         episode_count_in_single_descent = 1
         with tf.GradientTape() as tape:
             while episode_count_in_single_descent <= episodes_amount_needed_for_one_decent:
-                state = env.reset()
+                state_old = env.reset()
+                state_new = None
                 episode_reward = 0
                 done = False
                 while not done:
                     # env.render(); Adding this line would show the attempts
                     # of the agent in a pop up window.
 
-                    state = tf.convert_to_tensor(state)
+                    state_old = tf.convert_to_tensor(state_old)
                     # https://www.tensorflow.org/api_docs/python/tf/expand_dims
-                    state = tf.expand_dims(state, axis=0)
+                    state_old = tf.expand_dims(state_old, axis=0)
 
                     # Predict action probabilities and estimated future rewards
                     # from environment state
-                    action_probs = model(state)
+                    action_probs = model(state_old)
 
                     # Sample action from action probability distribution
                     action = np.random.choice(num_actions, p=np.squeeze(action_probs))
@@ -115,15 +115,16 @@ if __name__ == '__main__':
                     action_probs_history.append(action_probs[0, action])
 
                     # Apply the sampled action in our environment
-                    state, reward, done, myAction = env.step(action)
+                    state_new, reward, done, myAction = env.step(action)
                     correct_action_history.append(myAction)
                     # print(f"{datetime.now()}: center-d: {state[0]}, speed: {state[3]}, myAction = {myAction}, reward = {reward}", action_probs[0])
-                    print(f"{datetime.now()}: center-d: {state[0]}, myAction = {myAction}, reward = {reward}", action_probs[0])
+                    print(f"center-d: {state_old[0]}, action_prob: {action_probs[0]}, action = {action}, reward = {reward}")
                     rewards_history.append(reward)
                     episode_reward += reward
+                    state_old = state_new
 
                     if done:
-                        # env.simulatorDriver.backToMenu()
+                        env.simulatorDriver.backToMenu()
                         # calculate discounted rewards
                         discounted_sum = 0
                         for r in rewards_history[::-1]:
@@ -135,7 +136,7 @@ if __name__ == '__main__':
             running_reward = (1-gamma) * episode_reward + gamma * running_reward
 
             correct_action_history = np.array(correct_action_history)
-            print(f"correct actions probabilities: {np.sum(correct_action_history == 0)/correct_action_history.shape[0]}, {np.sum(correct_action_history == 1)/correct_action_history.shape[0]}, {np.sum(correct_action_history == 2)/correct_action_history.shape[0]}, {np.sum(correct_action_history == 3)/correct_action_history.shape[0]}")
+            # print(f"correct actions probabilities: {np.sum(correct_action_history == 0)/correct_action_history.shape[0]}, {np.sum(correct_action_history == 1)/correct_action_history.shape[0]}, {np.sum(correct_action_history == 2)/correct_action_history.shape[0]}, {np.sum(correct_action_history == 3)/correct_action_history.shape[0]}")
 
             # Calculate expected value from rewards
             # - At each timestep what was the total reward received after that timestep
@@ -167,10 +168,10 @@ if __name__ == '__main__':
                 # high rewards (compared to critic's estimate) with high probability.
                 log_prob = tf.math.log(prob)
                 policy_loss = -log_prob * ret
-                entropy_loss = ( prob * log_prob) * entropy_beta
+                # entropy_loss = ( prob * log_prob) * entropy_beta
                 # print(f"policy_loss: {policy_loss}")
                 # print(f"entropy_loss: {entropy_loss}")
-                actor_losses.append(policy_loss + entropy_loss)  # actor loss
+                actor_losses.append(policy_loss)  # actor loss
 
             # Backpropagation
             loss_value = sum(actor_losses)
@@ -190,7 +191,7 @@ if __name__ == '__main__':
 
         # Log details
         gradient_descent_count += 1
-        if gradient_descent_count % 5 == 0:
+        if gradient_descent_count % 1 == 0:
             model.save(modelPath)
             print(f"episode {gradient_descent_count}: reward = {episode_reward}")
             # print("running reward: {:.2f} at episode {}".format(running_reward, gradient_descent_count))

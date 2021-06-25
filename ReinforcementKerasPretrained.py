@@ -43,10 +43,10 @@ if __name__ == '__main__':
 
     num_inputs = env.observation_space.shape[0]
     num_actions = env.action_space.n
-    inputs = layers.Input(shape=(num_inputs,))
-    common1 = layers.Dense(128, activation="relu")(inputs)
-    common2 = layers.Dense(128, activation="relu")(common1)
-    action = layers.Dense(num_actions, activation="softmax")(common2)
+    inputs = layers.Input(shape=(num_inputs,), name='input')
+    common1 = layers.Dense(128, activation="relu", name='common1')(inputs)
+    common2 = layers.Dense(128, activation="relu", name='common2')(common1)
+    action = layers.Dense(num_actions, activation="softmax", name='action')(common2)
 
 
     # num_actions = 3
@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     _pretrainingEnv = gym.make('FixPolicy-v0')
     pretrainModel(model=model, env=_pretrainingEnv, trainTimes=1)
-    model.save(modelPath)
+    # model.save(modelPath)
     del _pretrainingEnv
 
 
@@ -177,10 +177,10 @@ if __name__ == '__main__':
                 # high rewards (compared to critic's estimate) with high probability.
                 log_prob = tf.math.log(prob)
                 policy_loss = -log_prob * ret
-                # entropy_loss = ( prob * log_prob) * entropy_beta
+                entropy_loss = ( prob * log_prob) * entropy_beta
                 # print(f"policy_loss: {policy_loss}")
                 # print(f"entropy_loss: {entropy_loss}")
-                actor_losses.append(policy_loss)  # actor loss
+                actor_losses.append(policy_loss + entropy_loss)  # actor loss
 
             # Backpropagation
             loss_value = sum(actor_losses)
@@ -200,7 +200,7 @@ if __name__ == '__main__':
 
         # Log details
         gradient_descent_count += 1
-        if gradient_descent_count % 5 == 0:
+        if gradient_descent_count % 1 == 0:
             model.save(modelPath)
             print(f"episode {gradient_descent_count}: reward = {episode_reward}")
             # print("running reward: {:.2f} at episode {}".format(running_reward, gradient_descent_count))

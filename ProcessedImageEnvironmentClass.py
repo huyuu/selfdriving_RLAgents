@@ -68,7 +68,7 @@ class ProcessedImageEnvironment(gym.Env):
         observation = None
         reward = None
         isDone = False
-        collideReward = -100
+        collideReward = -50
         # calculate action
         steering_angle_before, throttle_before = [0.0, 0.0]
         if action == 0: # turn left
