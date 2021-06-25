@@ -20,6 +20,10 @@ register(
     id='FixPolicy-v0',
     entry_point='FixPolicyEnvironmentClass:FixPolicyEnvironment'
 )
+register(
+    id='ProcessedImage-v0',
+    entry_point='ProcessedImageEnvironmentClass:ProcessedImageEnvironment'
+)
 
 if __name__ == '__main__':
     if platform == 'linux' or platform == 'linux2':
@@ -31,7 +35,7 @@ if __name__ == '__main__':
     # env = gym.make("CartPole-v0")  # Create the environment
     # env.seed(seed)
     # env = FixPolicyEnvironment()
-    env = gym.make('FixPolicy-v0')
+    env = gym.make('ProcessedImage-v0')
     eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 
 
@@ -72,13 +76,15 @@ if __name__ == '__main__':
 
     # Pretraining:
 
-    pretrainModel(model=model, env=env)
+    _pretrainingEnv = gym.make('FixPolicy-v0')
+    pretrainModel(model=model, env=_pretrainingEnv, trainTimes=1)
     model.save(modelPath)
+    del _pretrainingEnv
 
 
     # MARK: - Training
 
-    optimizer = keras.optimizers.Adam(learning_rate=1e-2)
+    optimizer = keras.optimizers.Adam(learning_rate=1e-3)
     huber_loss = keras.losses.Huber()
     action_probs_history = []
     rewards_history = []
@@ -87,8 +93,8 @@ if __name__ == '__main__':
     running_reward = 0
     gradient_descent_count = 0
     records = []
-    gamma = 0.1
-    episodes_amount_needed_for_one_decent = 3
+    gamma = 0.95
+    episodes_amount_needed_for_one_decent = 5
     entropy_beta = 1.0
 
     while running_reward < 2000:  # Run until solved
@@ -121,7 +127,7 @@ if __name__ == '__main__':
                     state_new, reward, done, myAction = env.step(action)
 
                     # print(f"{datetime.now()}: center-d: {state[0]}, speed: {state[3]}, myAction = {myAction}, reward = {reward}", action_probs[0])
-                    print(f"{datetime.now()}: center-d: {state_old[0]}, action_probs: {action_probs}, action: {action}, myAction: {myAction}, reward = {reward}")
+                    print(f"{datetime.now()}: state: {state_old[0]}, action_probs: {action_probs}, action: {action}, myAction: {myAction}, reward = {reward}")
                     rewards_history.append(reward)
                     episode_reward += reward
                     state_old = state_new
@@ -171,10 +177,10 @@ if __name__ == '__main__':
                 # high rewards (compared to critic's estimate) with high probability.
                 log_prob = tf.math.log(prob)
                 policy_loss = -log_prob * ret
-                entropy_loss = ( prob * log_prob) * entropy_beta
+                # entropy_loss = ( prob * log_prob) * entropy_beta
                 # print(f"policy_loss: {policy_loss}")
                 # print(f"entropy_loss: {entropy_loss}")
-                actor_losses.append(policy_loss + entropy_loss)  # actor loss
+                actor_losses.append(policy_loss)  # actor loss
 
             # Backpropagation
             loss_value = sum(actor_losses)

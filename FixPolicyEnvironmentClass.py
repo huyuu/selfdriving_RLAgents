@@ -36,27 +36,29 @@ class FixPolicyEnvironment(gym.Env):
         # last observation
         self.lastObservation = None
         self.lastCenterDeviation = 0.0
-        self.centerDeviationUnobservableTimes = 0
-        self.zeroSpeedTimes = 0
-        self.continuousOffCourseTimes = 0
-
         self.lastThrottleLevel = 0.0
         self.lastSpeed = 0.0
         self.lastSteeringAngle = 0.0
+        # disatisfied condition counters
+        self.centerDeviationUnobservableTimes = 0
+        self.zeroSpeedTimes = 0
+        self.continuousOffCourseTimes = 0
 
         self.step_count = 0
 
 
     def _reset(self):
         # Todo: Implementation
+        # last observation
+        self.lastObservation = None
         self.lastCenterDeviation = 0.0
-        self.centerDeviationUnobservableTimes = 0
-        self.lastCenterDeviation = 0.0
-        self.zeroSpeedTimes = 0
-        self.continuousOffCourseTimes = 0
         self.lastThrottleLevel = 0.0
         self.lastSpeed = 0.0
         self.lastSteeringAngle = 0.0
+        # disatisfied condition counters
+        self.centerDeviationUnobservableTimes = 0
+        self.zeroSpeedTimes = 0
+        self.continuousOffCourseTimes = 0
         self.step_count = 0
         # self.simulatorDriver.restart()
         # steering_angle_after, throttle_after, speed_after, image_after = self.simulatorDriver.sendActionAndGetRawObservation(0.0, 0.01)
@@ -68,6 +70,7 @@ class FixPolicyEnvironment(gym.Env):
         # self.lastCenterDeviation = centerDeviation
 
         observation = np.zeros(4, dtype=np.float32)
+        self.lastObservation = observation
         return observation
 
 
@@ -80,9 +83,9 @@ class FixPolicyEnvironment(gym.Env):
         # calculate action
         steering_angle_before, throttle_before = [0.0, 0.0]
         if action == 0: # turn left
-            steering_angle_before, throttle_before = [-0.3, 1.0]
+            steering_angle_before, throttle_before = [-0.2, 1.0]
         elif action == 1: # turn right
-            steering_angle_before, throttle_before = [0.3, 1.0]
+            steering_angle_before, throttle_before = [0.2, 1.0]
         elif action == 2: # go straight
             steering_angle_before, throttle_before = [0.0, 1.0]
         else: # break
@@ -111,7 +114,11 @@ class FixPolicyEnvironment(gym.Env):
         # # calculate center deviation
         # centerDeviation = self.centerDeviationDetector.getCenterDeviation(image_after)
 
-        centerDeviation = np.random.normal(loc=0.0, scale=0.4)
+        noise = (0.3+0.3) * np.random.rand() - 0.3
+        centerDeviation = self.lastCenterDeviation + 0.8 * steering_angle_before + noise
+        # print(f"centerDeviation: {centerDeviation} = last: {self.lastCenterDeviation}, action: {action}, steering_angle_before: {steering_angle_before}, noise: {noise}")
+        centerDeviation = max(-1.0, min(1.0, centerDeviation))
+        # centerDeviation = np.random.normal(loc=0.0, scale=0.4)
         # choosedAction = np.random.choice([0, 1, 2])
         # centerDeviation = None
         # if choosedAction == 0:
@@ -120,14 +127,13 @@ class FixPolicyEnvironment(gym.Env):
         #     centerDeviation = (0.2+0.2) * np.random.rand() - 0.2
         # else:
         #     centerDeviation = (-0.2 + 1.0) * np.random.rand() - 1.0
-        # centerDeviation = np.random.rand()
         self.lastThrottleLevel = max(0.0, min(1.0, self.lastThrottleLevel + throttle_before))
         if self.lastThrottleLevel >= 0.5:
             self.lastSpeed += 0.2
         else:
             self.lastSpeed -= 0.1
         self.lastSpeed = max(0.0, min(1.0, self.lastSpeed))
-        self.lastSteeringAngle = max(-1.0, min(1.0, self.lastSteeringAngle + steering_angle_before))
+        self.lastSteeringAngle = steering_angle_before
 
         # centerDeviation = 0.0
         # assert centerDeviation != None
@@ -159,6 +165,11 @@ class FixPolicyEnvironment(gym.Env):
 
     def get_action_meanings(self):
         return ['turn left', 'turn right', 'go straight', 'break']
+
+
+    def __calculateSteeringAngle(self, delta):
+        newSteeringAngle = self.lastSteeringAngle + delta
+        return max(-1.0, min(1.0, newSteeringAngle))
 
 
 if __name__ == '__main__':

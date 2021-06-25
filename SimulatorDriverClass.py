@@ -151,8 +151,8 @@ def helper_startServer(actionQueue, observationQueue):
                 # send action to simulator
                 send_control(steering_angle_before, throttle_before)
             # get observation from simulator
-            steering_angle_after = float(data["steering_angle"])
-            throttle_after = float(data["throttle"]) / 25.0
+            steering_angle_after = float(data["steering_angle"]) / 25.0
+            throttle_after = float(data["throttle"])
             speed_after = float(data["speed"]) / 30.5
             image_after = np.asarray(Image.open(BytesIO(base64.b64decode(data["image"]))))
             # put observation to observationQueue

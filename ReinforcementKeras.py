@@ -19,6 +19,10 @@ register(
     id='FixPolicy-v0',
     entry_point='FixPolicyEnvironmentClass:FixPolicyEnvironment'
 )
+register(
+    id='ProcessedImage-v0',
+    entry_point='ProcessedImageEnvironmentClass:ProcessedImageEnvironment'
+)
 
 if __name__ == '__main__':
     if platform == 'linux' or platform == 'linux2':

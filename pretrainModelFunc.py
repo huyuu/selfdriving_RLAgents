@@ -7,22 +7,22 @@ from FixPolicyEnvironmentClass import FixPolicyEnvironment
 
 
 
-def pretrainModel(model, env):
+def pretrainModel(model, env, trainTimes=3):
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=1e-3),
         loss=keras.losses.CategoricalCrossentropy(),
         metrics=[keras.metrics.CategoricalAccuracy()],
     )
 
-    for data_set_count in range(3):
+    for data_set_count in range(trainTimes):
         xs, ys = getExperience(env)
         x_train = xs[:int(len(xs)*0.8)]
         y_train = ys[:int(len(ys)*0.8)]
         x_test = xs[-int(len(xs)*0.8):]
         y_test = ys[-int(len(ys)*0.8):]
 
-        # print(xs[:10, :])
-        # print(ys[:10, :])
+        print(xs[:10, :])
+        print(ys[:10, :])
         model.fit(
             x_train,
             y_train,
@@ -57,10 +57,18 @@ def getExperience(env, episods=10):
         observation_old = env.reset()
         isDone = False
         while not isDone:
-            observation_new, reward, isDone, correct_action = env.step(action=0)
+            # choose action by fixed policy
+            action = 0
+            if abs(observation_old[0]) <= 0.2:
+                action = 2
+            elif observation_old[0] > 0.2:
+                action = 0
+            else:
+                action = 1
+            observation_new, reward, isDone, correct_action = env.step(action)
             observation_history.append(observation_old.tolist())
             new_label = copy.deepcopy(action_candidates)
-            new_label[correct_action] = 1
+            new_label[action] = 1
             label_history.append(new_label)
             observation_old = observation_new
         episode_count += 1
