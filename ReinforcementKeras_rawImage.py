@@ -24,10 +24,10 @@ register(
     id='ProcessedImage-v0',
     entry_point='ProcessedImageEnvironmentClass:ProcessedImageEnvironment'
 )
-register(
-    id='RawImage-v0',
-    entry_point='RawImageEnvironmentClass:RawImageEnvironment'
-)
+# register(
+#     id='RawImage-v0',
+#     entry_point='RawImageEnvironmentClass:RawImageEnvironment'
+# )
 
 if __name__ == '__main__':
     if platform == 'linux' or platform == 'linux2':
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     # env = gym.make("CartPole-v0")  # Create the environment
     # env.seed(seed)
     # env = FixPolicyEnvironment()
-    env = gym.make('RawImage-v0')
+    env = RawImageEnvironment()
     eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 
 
@@ -52,21 +52,21 @@ if __name__ == '__main__':
     # common2 = layers.Dense(128, activation="relu", name='common2')(common1)
     # action = layers.Dense(num_actions, activation="softmax", name='action')(common2)
 
-    num_actions = env.action_spec.shape[0]
-    image_inputs = layers.Input(shape=env.observation_spec['image']['shape'], name='image_input')
+    image_inputs = layers.Input(shape=env.observation_spec['image']['shape'], dtype=np.float, name='image')
     image_conv1 = layers.Conv2D(filters=32, kernel_size=8, strides=(4, 4), activation='relu', name='image_conv1')(image_inputs)
     image_conv2 = layers.Conv2D(filters=32, kernel_size=8, strides=(4, 4), activation='relu', name='image_conv2')(image_conv1)
     image_conv3 = layers.Conv2D(filters=32, kernel_size=8, strides=(4, 4), activation='relu', name='image_conv3')(image_conv2)
-    image_flattened = layers.flatten(name='flattened')(image_conv3)
+    image_flattened = layers.Flatten(name='flattened')(image_conv3)
     image_dense1 = layers.Dense(64, activation='relu', name='common_dense1')(image_flattened)
     image_dense2 = layers.Dense(4, activation='relu', name='common_dense2')(image_dense1)
 
-    subPara_inputs = layers.Input(shape=env.observation_spec['subPara']['shape'], name='subPara_input')
+    subPara_inputs = layers.Input(shape=env.observation_spec['subPara']['shape'], dtype=np.float, name='subPara')
     subPara_dense = layers.Dense(4, activation='relu', name='subPara_dense')(subPara_inputs)
 
     common = layers.concatenate([image_dense2, subPara_dense])
 
-    action_dense1 = layers.Dense(16, activation="relu", name='action_dense1')(common)
+    action_dense1 = layers.Dense(8, activation="relu", name='action_dense1')(common)
+    num_actions = env.action_spec['shape'][0]
     action = layers.Dense(num_actions, activation="softmax", name='action_dense2')(action_dense1)
 
 
@@ -78,12 +78,12 @@ if __name__ == '__main__':
     if os.path.exists(modelPath):
         model = keras.models.load_model(modelPath)
     else:
-        model = keras.Model(inputs=inputs, outputs=action)
+        model = keras.Model(inputs=[image_inputs, subPara_inputs], outputs=action)
 
 
     # MARK: - Training
 
-    optimizer = keras.optimizers.Adam(learning_rate=1e-2)
+    optimizer = keras.optimizers.Adam(learning_rate=1e-3)
     huber_loss = keras.losses.Huber()
     action_probs_history = []
     rewards_history = []
@@ -107,10 +107,16 @@ if __name__ == '__main__':
                 while not done:
                     # env.render(); Adding this line would show the attempts
                     # of the agent in a pop up window.
-
-                    state_old = tf.convert_to_tensor(state_old)
+                    # state_old = tf.convert_to_tensor(state_old)
+                    _state = []
+                    for state_element in state_old:
+                        temp = tf.convert_to_tensor(state_element)
+                        temp = tf.expand_dims(temp, axis=0)
+                        _state.append(temp)
+                    state_old = _state
+                    # print(state_old)
                     # https://www.tensorflow.org/api_docs/python/tf/expand_dims
-                    state_old = tf.expand_dims(state_old, axis=0)
+                    # state_old = tf.expand_dims(state_old, axis=0)
 
                     # Predict action probabilities and estimated future rewards
                     # from environment state
@@ -125,7 +131,7 @@ if __name__ == '__main__':
                     state_new, reward, done, myAction = env.step(action)
                     correct_action_history.append(myAction)
                     # print(f"{datetime.now()}: center-d: {state[0]}, speed: {state[3]}, myAction = {myAction}, reward = {reward}", action_probs[0])
-                    print(f"center-d: {state_old[0]}, action_prob: {action_probs[0]}, action = {action}, reward = {reward}")
+                    print(f"action_prob: {action_probs[0]}, action = {action}, reward = {reward}")
                     rewards_history.append(reward)
                     episode_reward += reward
                     state_old = state_new
@@ -175,13 +181,13 @@ if __name__ == '__main__':
                 # high rewards (compared to critic's estimate) with high probability.
                 log_prob = tf.math.log(prob)
                 policy_loss = -log_prob * ret
-                # entropy_loss = ( prob * log_prob) * entropy_beta
+                entropy_loss = ( prob * log_prob) * entropy_beta
                 # print(f"policy_loss: {policy_loss}")
                 # print(f"entropy_loss: {entropy_loss}")
-                actor_losses.append(policy_loss)  # actor loss
+                actor_losses.append(policy_loss + entropy_loss)  # actor loss
 
             # Backpropagation
-            loss_value = sum(actor_losses)
+            loss_value = sum(actor_losses)/len(actor_losses)
             grads = tape.gradient(loss_value, model.trainable_variables)
             optimizer.apply_gradients(zip(grads, model.trainable_variables))
 

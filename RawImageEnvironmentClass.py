@@ -13,9 +13,9 @@ class RawImageEnvironment():
         self.observation_spec = {
             'image': {
                 'shape': (160, 320, 3), # delta from center line, speed (clipped to [0, 1]), steering angle
-                'dtype': np.int32,
+                'dtype': np.float,
                 'minValue': 0,
-                'maxValue': 255
+                'maxValue': 1.0
             },
             'subPara': {
                 'shape': (3,), # delta from center line, speed (clipped to [0, 1]), steering angle
@@ -42,7 +42,6 @@ class RawImageEnvironment():
         }
         self.simulatorDriver = SimulatorDriver()
         self.simulatorDriver.startServer()
-        self.observation = {}
         self.shouldExit = False
         # set listener
         def on_press(key):
@@ -52,6 +51,11 @@ class RawImageEnvironment():
             on_press=on_press
         )
         self.keyboardListener.start()
+        # last properties
+        self.lastObservation = None
+        self.lastSpeed = 0.0
+
+        self.collideReward = -50
 
 
     def reset(self):
@@ -60,10 +64,11 @@ class RawImageEnvironment():
         self.simulatorDriver.restart()
         steering_angle_after, throttle_after, speed_after, image_after = self.simulatorDriver.sendActionAndGetRawObservation(0.0, 0.01)
         observation = [
-            image_after,
+            (image_after/255.0).astype(np.float),
             np.array([steering_angle_after, throttle_after, speed_after])
         ]
         self.lastObservation = observation
+        self.lastSpeed = speed_after
         return observation
 
 
@@ -71,37 +76,41 @@ class RawImageEnvironment():
         observation = None
         reward = None
         if self.shouldExit:
-            return self.lastObservation, -100, True
+            return self.lastObservation, self.collideReward, True, None
         isDone = False
         # calculate action
         steering_angle_before, throttle_before = [0.0, 0.0]
         if action == 0: # turn left
-            steering_angle_before, throttle_before = [-0.1, 1.0]
+            steering_angle_before, throttle_before = [-0.2, 1.0]
         elif action == 1: # turn right
-            steering_angle_before, throttle_before = [0.1, 1.0]
+            steering_angle_before, throttle_before = [0.2, 1.0]
         elif action == 2: # go straight
             steering_angle_before, throttle_before = [0.0, 1.0]
         else: # break
-            steering_angle_before, throttle_before = [0.0, 0.0]
+            if self.lastSpeed <= 0.5:
+                steering_angle_before, throttle_before = [0.0, 0.0]
+            else:
+                steering_angle_before, throttle_before = [0.0, -0.5]
         # get observation
         try:
             steering_angle_after, throttle_after, speed_after, image_after = self.simulatorDriver.sendActionAndGetRawObservation(steering_angle_before, throttle_before)
         except queue.Empty as error:
             isDone = True
-            return self.lastObservation, -100, True
+            return self.lastObservation, self.collideReward, True, None
 
         observation = [
-            image_after,
-            np.array([steering_angle_after, throttle_after, speed_after])
+            (image_after/255.0).astype(np.float),
+            np.array([steering_angle_after, throttle_after, speed_after], dtype=np.float)
         ]
         self.lastObservation = observation
+        self.lastSpeed = speed_after
 
         if self.shouldExit:
-            return self.lastObservation, -100, True
+            return self.lastObservation, self.collideReward, True, None
         # calculate reward
         reward = speed_after
 
-        return observation, reward, isDone
+        return observation, reward, isDone, None
 
 
 if __name__ == '__main__':
