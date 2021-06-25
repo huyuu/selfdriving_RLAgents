@@ -133,7 +133,7 @@ if __name__ == '__main__':
                     state_old = state_new
 
                     if done:
-                        # env.simulatorDriver.backToMenu()
+                        env.simulatorDriver.backToMenu()
                         # calculate discounted rewards
                         discounted_sum = 0
                         for r in rewards_history[::-1]:

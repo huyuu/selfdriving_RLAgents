@@ -21,8 +21,8 @@ def pretrainModel(model, env, trainTimes=3):
         x_test = xs[-int(len(xs)*0.8):]
         y_test = ys[-int(len(ys)*0.8):]
 
-        print(xs[:10, :])
-        print(ys[:10, :])
+        # print(xs[:10, :])
+        # print(ys[:10, :])
         model.fit(
             x_train,
             y_train,
