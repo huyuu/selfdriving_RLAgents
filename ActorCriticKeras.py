@@ -34,7 +34,8 @@ if __name__ == '__main__':
     max_steps_per_episode = int(1e8)
     # env = gym.make("CartPole-v0")  # Create the environment
     # env.seed(seed)
-    env = gym.make('FixPolicy-v0')
+    # env = gym.make('FixPolicy-v0')
+    env = gym.make('ProcessedImage-v0')
     eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 
 
@@ -124,7 +125,7 @@ if __name__ == '__main__':
                     state_old = state_new
 
                     if done:
-                        # env.simulatorDriver.backToMenu()
+                        env.simulatorDriver.backToMenu()
                         # calculate discounted rewards
                         discounted_sum = 0
                         for r in rewards_history[::-1]:
