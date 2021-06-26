@@ -31,29 +31,30 @@ class CenterDeviationDetector():
         left = 0
         right = 320
         gap = None
-        lines = cv2.HoughLinesP(image_edge, rho=1, theta=nu.pi/360, threshold=50, minLineLength=50, maxLineGap=5)
-        if lines is not None:
-            for line in lines:
-                x1,y1,x2,y2 = line[0]
-                if y1 > height - 20:
-                    if x1 < 160:
-                        left = max(x1, left)
-                    else:
-                        right = min(x1, right)
-                if y2 > height - 20:
-                    if x2 < 160:
-                        left = max(x2, left)
-                    else:
-                        right = min(x2, right)
-                # cv2.line(image_trimmed, (x1,y1), (x2,y2), (255, 0, 0), 2)
-            if right == 320 and left == 0:
-                return None
-            roadCenter = int((right + left)/2)
-            roadHalfWidth = (right - left)/2
-            gap = (160 - roadCenter) / roadHalfWidth
-            return float(gap)
-        else:
-            return None
+        # lines = cv2.HoughLinesP(image_edge, rho=1, theta=nu.pi/360, threshold=50, minLineLength=50, maxLineGap=5)
+        # if lines is not None:
+        #     for line in lines:
+        #         x1,y1,x2,y2 = line[0]
+        #         if y1 > height - 20:
+        #             if x1 < 160:
+        #                 left = max(x1, left)
+        #             else:
+        #                 right = min(x1, right)
+        #         if y2 > height - 20:
+        #             if x2 < 160:
+        #                 left = max(x2, left)
+        #             else:
+        #                 right = min(x2, right)
+        #         # cv2.line(image_trimmed, (x1,y1), (x2,y2), (255, 0, 0), 2)
+        #     if right == 320 and left == 0:
+        #         return None
+        #     roadCenter = int((right + left)/2)
+        #     roadHalfWidth = (right - left)/2
+        #     gap = (160 - roadCenter) / roadHalfWidth
+        #     return float(gap)
+        # else:
+        #     return None
+
         # cv2.circle(image_trimmed, (left, height-15),5,(255,0,0),thickness=-1)
         # cv2.circle(image_trimmed, (right, height-15),5,(255,0,0),thickness=-1)
         # cv2.circle(image_trimmed, (roadCenter, height-15),5,(0,255,0),thickness=-1)
@@ -62,34 +63,32 @@ class CenterDeviationDetector():
         # # return image_trimmed
 
 
-        # countours, hierarchy = cv2.findContours(image_edge, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        # # countours = nu.array(countours)
-        # for countour in countours:
-        #     countour = countour[:, 0, :]
-        #     xs_bottom = countour[countour[:, 1] < 20, 0]
-        #     if len(xs_bottom) == 0:
-        #         continue
-        #     possibleLefts = xs_bottom[xs_bottom < 160]
-        #     if len(possibleLefts) > 0:
-        #         possibleLeft = possibleLefts.max()
-        #         left = max(possibleLeft, left)
-        #     possibleRights = xs_bottom[xs_bottom > 160]
-        #     if len(possibleRights) > 0:
-        #         possibleRight = possibleRights.min()
-        #         right = min(possibleRight, right)
-        # roadCenter = (right + left)/2
-        # roadHalfWidth = (right - left)/2
-        # gap = (160 - roadCenter) / roadHalfWidth
-        # # Image center color_blue
-        # cv2.circle(image_trimmed, (left, 15),5,(255,0,0),thickness=-1)
-        # cv2.circle(image_trimmed, (right, 15),5,(255,0,0),thickness=-1)
-        # # The center of the road  color_red
-        # cv2.circle(image_trimmed, (160,15),5,(0,0,255),thickness=-1)
-        # return cv2.drawContours(image_trimmed, countours, -1, (255,0,0), 2)
+        countours, hierarchy = cv2.findContours(image_edge, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        countours = nu.array(countours)
+        for countour in countours:
+            countour = countour[:, 0, :]
+            xs_bottom = countour[countour[:, 1] < 20, 0]
+            if len(xs_bottom) == 0:
+                continue
+            possibleLefts = xs_bottom[xs_bottom < 160]
+            if len(possibleLefts) > 0:
+                possibleLeft = possibleLefts.max()
+                left = max(possibleLeft, left)
+            possibleRights = xs_bottom[xs_bottom > 160]
+            if len(possibleRights) > 0:
+                possibleRight = possibleRights.min()
+                right = min(possibleRight, right)
+        roadCenter = (right + left)/2
+        roadHalfWidth = (right - left)/2
+        gap = (160 - roadCenter) / roadHalfWidth
+        if right == 320 and left == 0:
+            return None
+        else:
+            return gap
 
-        # for i in range(len(countours)):
-        #     x = countours[i][0][0][0]
-        #     y = countours[i][0][0][1]
+        # for countour in countours:
+        #     x = countour[0][0][0]
+        #     y = countour[0][0][1]
         #
         #     if x < 100 and y > 20:
         #         left = x
@@ -105,45 +104,78 @@ class CenterDeviationDetector():
     # MAKR: - Private Methods
 
     def getCenterDeviationWithImage(self, image_origin):
-        y_start = 60
-        height = 50
+        y_start = 40
+        height = 70
         y_end = y_start+height
         image_trimmed = image_origin[y_start: y_end, 0: 320]
-        image_blurred = cv2.bilateralFilter(image_trimmed, 5, 100, 100)
+        image_blurred = cv2.bilateralFilter(image_trimmed, 5, 150, 150)
         image_gray = cv2.cvtColor(image_blurred, cv2.COLOR_RGB2GRAY)
         # image_gray = cv2.cvtColor(image_trimmed,cv2.COLOR_RGB2GRAY)
         # dst = cv2.fastNlMeansDenoising(image_trimmed,h=20)
         # image_edge = cv2.Canny(dst, 150, 200)
-        image_edge = cv2.Canny(image_gray, 150, 200)
+        image_edge = cv2.Canny(image_gray, 150, 300)
 
         left = 0
         right = 320
         gap = None
-        lines = cv2.HoughLinesP(image_edge, rho=1, theta=nu.pi/360, threshold=50, minLineLength=50, maxLineGap=5)
-        if lines is not None:
-            for line in lines:
-                x1,y1,x2,y2 = line[0]
-                if y1 > height - 20:
-                    if x1 < 160:
-                        left = max(x1, left)
-                    else:
-                        right = min(x1, right)
-                if y2 > height - 20:
-                    if x2 < 160:
-                        left = max(x2, left)
-                    else:
-                        right = min(x2, right)
-                # cv2.line(image_trimmed, (x1,y1), (x2,y2), (255, 0, 0), 2)
-            if right == 320 and left == 0:
-                return None, image_origin
-            roadCenter = int((right + left)/2)
-            roadHalfWidth = (right - left)/2
-            gap = (160 - roadCenter) / roadHalfWidth
-            cv2.circle(image_origin,(160,30+y_start),5,(255,0,0),thickness=1)
-            cv2.circle(image_origin,(roadCenter,30+y_start),5,(0,0,255),thickness=1)
-            return float(gap), image_origin
+        # lines = cv2.HoughLinesP(image_edge, rho=1, theta=nu.pi/360, threshold=50, minLineLength=50, maxLineGap=5)
+        # if lines is not None:
+        #     for line in lines:
+        #         x1,y1,x2,y2 = line[0]
+        #         if y1 > height - 20:
+        #             if x1 < 160:
+        #                 left = max(x1, left)
+        #             else:
+        #                 right = min(x1, right)
+        #         if y2 > height - 20:
+        #             if x2 < 160:
+        #                 left = max(x2, left)
+        #             else:
+        #                 right = min(x2, right)
+        #         # cv2.line(image_trimmed, (x1,y1), (x2,y2), (255, 0, 0), 2)
+        #     if right == 320 and left == 0:
+        #         return None, image_origin
+        #     roadCenter = int((right + left)/2)
+        #     roadHalfWidth = (right - left)/2
+        #     gap = (160 - roadCenter) / roadHalfWidth
+        #     cv2.circle(image_origin,(160,30+y_start),5,(255,0,0),thickness=1)
+        #     cv2.circle(image_origin,(roadCenter,30+y_start),5,(0,0,255),thickness=1)
+        #     return float(gap), image_origin
+        # else:
+        #     return None, image_origin
+        countours, hierarchy = cv2.findContours(image_edge, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        # countours = nu.array(countours)
+        for countour in countours:
+            countour = countour[:, 0, :]
+            xs_bottom = countour[countour[:, 1] > height - 20, 0]
+            if len(xs_bottom) == 0:
+                continue
+            possibleLefts = xs_bottom[xs_bottom < 160]
+            if len(possibleLefts) > 0:
+                possibleLeft = possibleLefts.max()
+                left = max(possibleLeft, left)
+            possibleRights = xs_bottom[xs_bottom > 160]
+            if len(possibleRights) > 0:
+                possibleRight = possibleRights.min()
+                right = min(possibleRight, right)
+        roadCenter = (right + left)/2
+        roadHalfWidth = (right - left)/2
+        gap = (160 - roadCenter) / roadHalfWidth
+        if right == 320 and left == 0:
+            return None, image_edge
         else:
-            return None, image_origin
+            # # Image center color_blue
+            # cv2.circle(image_edge, (int(left), height-5),5,(0,255,0),thickness=1)
+            # cv2.circle(image_edge, (int(right), height-5),5,(0,255,0),thickness=1)
+            # The center of the road  color_red
+            cv2.circle(image_edge, (int(roadCenter),height-5),5,(255,0,0),thickness=3)
+            cv2.circle(image_edge, (160,height-5),5,(255,0,0),thickness=3)
+            try:
+                cv2.drawContours(image_edge, countours, 1, (255,0,0), 1)
+            except:
+                return gap, image_edge
+            return gap, image_edge
+
 
     def showVedio(self):
         fig = pl.figure()
@@ -158,7 +190,7 @@ class CenterDeviationDetector():
                 pl.title(f"")
             else:
                 pl.title(f'{gap}')
-            image_plot = pl.imshow(image)
+            image_plot = pl.imshow(image, cmap='gray')
             plottingImages.append([image_plot])
         ani = animation.ArtistAnimation(fig, plottingImages, interval=50)
         pl.show()
