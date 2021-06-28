@@ -34,7 +34,7 @@ class CenterDeviationDetector():
         # image_gray = cv2.cvtColor(image_trimmed,cv2.COLOR_RGB2GRAY)
         # dst = cv2.fastNlMeansDenoising(image_trimmed,h=20)
         # image_edge = cv2.Canny(dst, 150, 200)
-        image_edge = cv2.Canny(image_gray, 150, 300)
+        image_edge = cv2.Canny(image_gray, 150, 350)
 
         left = 0
         right = 320

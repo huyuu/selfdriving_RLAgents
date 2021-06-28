@@ -78,7 +78,7 @@ if __name__ == '__main__':
     if os.path.exists(recordsPath):
         with open(recordsPath, "rb") as file:
             records = pickle.load(file)
-            running_reward = records[2]
+            running_reward = records[-1][2]
 
 
     # MARK: - Training
@@ -186,8 +186,7 @@ if __name__ == '__main__':
             optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
             records.append([gradient_descent_count, episode_reward, running_reward, loss_value])
-            with open(recordsPath, "wb") as file:
-                pickle.dump(records, file)
+
 
             # Clear the loss and reward history
             action_probs_history.clear()
@@ -201,5 +200,7 @@ if __name__ == '__main__':
         gradient_descent_count += 1
         if gradient_descent_count % 1 == 0:
             model.save(modelPath)
+            with open(recordsPath, "wb") as file:
+                pickle.dump(records, file)
             # print(f"episode {gradient_descent_count}: reward = {episode_reward}")
             # print("running reward: {:.2f} at episode {}".format(running_reward, gradient_descent_count))

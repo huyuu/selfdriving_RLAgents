@@ -79,6 +79,13 @@ if __name__ == '__main__':
         model = keras.models.load_model(modelPath)
     else:
         model = keras.Model(inputs=[image_inputs, subPara_inputs], outputs=action)
+    recordsPath = f"{modelDirPath}/record.pickle"
+    records = []
+    running_reward = 0.0
+    if os.path.exists(recordsPath):
+        with open(recordsPath, "rb") as file:
+            records = pickle.load(file)
+            running_reward = records[-1][2]
 
 
     # MARK: - Training
@@ -89,9 +96,7 @@ if __name__ == '__main__':
     rewards_history = []
     discounted_rewards_history = []
     correct_action_history = []
-    running_reward = 0
     gradient_descent_count = 0
-    records = []
     gamma = 0.95
     episodes_amount_needed_for_one_decent = 5
     entropy_beta = 1.0
@@ -129,8 +134,9 @@ if __name__ == '__main__':
 
                     # Apply the sampled action in our environment
                     state_new, reward, done, myAction = env.step(action)
-                    correct_action_history.append(myAction)
-                    # print(f"{datetime.now()}: center-d: {state[0]}, speed: {state[3]}, myAction = {myAction}, reward = {reward}", action_probs[0])
+                    # correct_action_history.append(myAction)
+                    print(f"observation:")
+                    print(state_old[0])
                     print(f"action_prob: {action_probs[0]}, action = {action}, reward = {reward}")
                     rewards_history.append(reward)
                     episode_reward += reward
@@ -144,11 +150,11 @@ if __name__ == '__main__':
                             discounted_sum = r + gamma * discounted_sum
                             discounted_rewards_history.insert(0, discounted_sum)
                         # break
-                episode_count_in_single_descent += 1
-            # Update running reward to check condition for solving
-            running_reward = (1-gamma) * episode_reward + gamma * running_reward
+                        episode_count_in_single_descent += 1
+                        # Update running reward to check condition for solving
+                        running_reward = (1-gamma) * episode_reward + gamma * running_reward
 
-            correct_action_history = np.array(correct_action_history)
+            # correct_action_history = np.array(correct_action_history)
             # print(f"correct actions probabilities: {np.sum(correct_action_history == 0)/correct_action_history.shape[0]}, {np.sum(correct_action_history == 1)/correct_action_history.shape[0]}, {np.sum(correct_action_history == 2)/correct_action_history.shape[0]}, {np.sum(correct_action_history == 3)/correct_action_history.shape[0]}")
 
             # Calculate expected value from rewards
@@ -192,8 +198,6 @@ if __name__ == '__main__':
             optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
             records.append([gradient_descent_count, episode_reward, running_reward, loss_value])
-            with open(f"{modelDirPath}/record.pickle", "wb") as file:
-                pickle.dump(records, file)
 
             # Clear the loss and reward history
             action_probs_history.clear()
@@ -206,5 +210,7 @@ if __name__ == '__main__':
         gradient_descent_count += 1
         if gradient_descent_count % 1 == 0:
             model.save(modelPath)
-            print(f"episode {gradient_descent_count}: reward = {episode_reward}")
+            with open(recordsPath, "wb") as file:
+                pickle.dump(records, file)
+            # print(f"episode {gradient_descent_count}: reward = {episode_reward}")
             # print("running reward: {:.2f} at episode {}".format(running_reward, gradient_descent_count))

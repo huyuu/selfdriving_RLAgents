@@ -117,13 +117,16 @@ class ProcessedImageEnvironment(gym.Env):
 
         # calculate reward
         # reward = speed_after - abs(centerDeviation)
-        reward = speed_after + leftQueue_mean + rightQueue_mean
+        if leftQueue_mean >= rightQueue_mean:
+            reward = speed_after + abs(rightQueue_mean/leftQueue_mean)
+        else:
+            reward = speed_after + abs(leftQueue_mean/rightQueue_mean)
 
         # check done
         # if self.centerDeviationUnobservableTimes >= 10:
         #     isDone = True
         #     reward = collideReward
-        if self.continuousOffCourseTimes >= 10:
+        if self.continuousOffCourseTimes >= 5:
             print("offCourse!!!")
             isDone = True
             reward = collideReward
