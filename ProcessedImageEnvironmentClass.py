@@ -87,7 +87,7 @@ class ProcessedImageEnvironment(gym.Env):
             steering_angle_after, throttle_after, speed_after, image_after = self.simulatorDriver.sendActionAndGetRawObservation(steering_angle_before, throttle_before)
         except queue.Empty as error:
             isDone = True
-            return self.lastObservation, collideReward, True, None
+            return self.lastObservation, 0, True, None
         # calculate center deviation
         leftQueue, rightQueue = self.centerDeviationDetector.getCenterDeviation(image_after)
         # print(f"{centerDeviation}, {self.lastCenterDeviation}")
@@ -117,10 +117,17 @@ class ProcessedImageEnvironment(gym.Env):
 
         # calculate reward
         # reward = speed_after - abs(centerDeviation)
-        if leftQueue_mean >= rightQueue_mean:
-            reward = speed_after + abs(rightQueue_mean/leftQueue_mean)
+        if leftQueue_mean >= 1e-3 and rightQueue_mean >= 1e-3:
+            if leftQueue_mean >= rightQueue_mean:
+                reward = speed_after + rightQueue_mean/leftQueue_mean
+            else:
+                reward = speed_after + leftQueue_mean/rightQueue_mean
+        elif leftQueue_mean >= 1e-3 and rightQueue_mean < 1e-3: # only left is observed
+            reward = speed_after + leftQueue_mean/2.0
+        elif leftQueue_mean < 1e-3 and rightQueue_mean >= 1e-3: # only right is observed
+            reward = speed_after + rightQueue_mean/2.0
         else:
-            reward = speed_after + abs(leftQueue_mean/rightQueue_mean)
+            reward = speed_after
 
         # check done
         # if self.centerDeviationUnobservableTimes >= 10:
