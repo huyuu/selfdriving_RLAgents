@@ -5,7 +5,7 @@ import gym
 from gym import spaces
 
 from SimulatorDriverClass import SimulatorDriver
-from CenterDeviationDetectorClass import CenterDeviationDetector
+from CenterDeviationDetectorClassOrigin import CenterDeviationDetector
 
 
 class ProcessedImageEnvironment(gym.Env):
@@ -14,7 +14,7 @@ class ProcessedImageEnvironment(gym.Env):
         # for road detector
         self.centerDeviationDetector = CenterDeviationDetector()
 
-        self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(int(self.centerDeviationDetector.queueElementAmount*2+3),))
+        self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(int(self.centerDeviationDetector.queueElementAmount*2+3+1),))
         self.action_space = spaces.Discrete(4)
         self.observation_spec = {
             'shape': (int(self.centerDeviationDetector.queueElementAmount*2+3),), # delta from center line, speed (clipped to [0, 1]), steering angle, throttle
@@ -107,6 +107,14 @@ class ProcessedImageEnvironment(gym.Env):
             self.continuousOffCourseTimes += 1
         else:
             self.continuousOffCourseTimes = 0
+
+        ratio = 0.0
+        if leftQueue_mean >= 1e-3 and rightQueue_mean >= 1e-3:
+            ratio = 1 - rightQueue_mean/leftQueue_mean
+        elif leftQueue_mean >= 1e-3 and rightQueue_mean < 1e-3: # only left is observed
+            ratio = leftQueue_mean/2.0
+        elif leftQueue_mean < 1e-3 and rightQueue_mean >= 1e-3: # only right is observed
+            ratio = rightQueue_mean/2.0
         # centerDeviation = 0.0
         # assert centerDeviation != None
         # observation = np.array([centerDeviation, steering_angle_after, throttle_after, speed_after])

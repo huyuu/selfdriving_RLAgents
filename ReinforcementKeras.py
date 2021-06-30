@@ -156,9 +156,6 @@ if __name__ == '__main__':
             #     returns.insert(0, discounted_sum)
 
             # Normalize
-            # returns = np.array(returns)
-            # returns = (returns - np.mean(returns)) / (np.std(returns) + eps)
-            # returns = returns.tolist()
             discounted_rewards_history = np.array(discounted_rewards_history)
             discounted_rewards_history = (discounted_rewards_history - np.mean(discounted_rewards_history)) / (np.std(discounted_rewards_history) + eps)
             discounted_rewards_history = discounted_rewards_history.tolist()
