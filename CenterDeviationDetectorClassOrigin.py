@@ -78,12 +78,16 @@ class CenterDeviationDetector():
             if len(possibleRights) > 0:
                 possibleRight = possibleRights.min()
                 right = min(possibleRight, right)
-        roadCenter = (right + left)/2
-        roadHalfWidth = (right - left)/2
-        gap = (160 - roadCenter) / roadHalfWidth
         if right == 320 and left == 0:
             return None
         else:
+            if right == 320:
+                right = 160
+            if left == 0:
+                left = 160
+            roadCenter = (right + left)/2
+            roadHalfWidth = (right - left)/2
+            gap = (160 - roadCenter) / roadHalfWidth
             return gap
 
         # for countour in countours:

@@ -5,7 +5,7 @@ import gym
 from gym import spaces
 
 from SimulatorDriverClass import SimulatorDriver
-from CenterDeviationDetectorClassOrigin import CenterDeviationDetector
+from CenterDeviationDetectorClass import CenterDeviationDetector
 
 
 class ProcessedImageEnvironment(gym.Env):
@@ -14,10 +14,10 @@ class ProcessedImageEnvironment(gym.Env):
         # for road detector
         self.centerDeviationDetector = CenterDeviationDetector()
 
-        self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(int(self.centerDeviationDetector.queueElementAmount*2+3+1),))
+        self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(int(4),))
         self.action_space = spaces.Discrete(4)
         self.observation_spec = {
-            'shape': (int(self.centerDeviationDetector.queueElementAmount*2+3),), # delta from center line, speed (clipped to [0, 1]), steering angle, throttle
+            'shape': (4,), # delta from center line, speed (clipped to [0, 1]), steering angle, throttle
             'dtype': np.float,
             'minValue': -1.0,
             'maxValue': 1.0,
@@ -55,11 +55,11 @@ class ProcessedImageEnvironment(gym.Env):
         # restart simulatorDriver
         self.simulatorDriver.restart()
         steering_angle_after, throttle_after, speed_after, image_after = self.simulatorDriver.sendActionAndGetRawObservation(0.0, 0.01)
-        leftQueue, rightQueue = self.centerDeviationDetector.getCenterDeviation(image_after)
-        # if centerDeviation is None:
-        #     centerDeviation = self.lastCenterDeviation
+        leftDrift, rightDrift, centerDeviation = self.centerDeviationDetector.getCenterDeviation(image_after)
+        if centerDeviation is None:
+            centerDeviation = self.lastCenterDeviation
         # observation = np.array([centerDeviation, steering_angle_after, throttle_after, speed_after])
-        observation = np.concatenate([leftQueue, rightQueue, np.array([steering_angle_after, throttle_after, speed_after])])
+        observation = np.array([centerDeviation, steering_angle_after, throttle_after, speed_after])
         self.lastObservation = observation
         # self.lastCenterDeviation = centerDeviation
         self.lastSteeringAngle = steering_angle_after
@@ -89,59 +89,50 @@ class ProcessedImageEnvironment(gym.Env):
             isDone = True
             return self.lastObservation, 0, True, None
         # calculate center deviation
-        leftQueue, rightQueue = self.centerDeviationDetector.getCenterDeviation(image_after)
+        leftDrift, rightDrift, centerDeviation = self.centerDeviationDetector.getCenterDeviation(image_after)
         # print(f"{centerDeviation}, {self.lastCenterDeviation}")
-        # if centerDeviation is None:
-        #     centerDeviation = self.lastCenterDeviation
-        #     self.centerDeviationUnobservableTimes += 1
-        # else:
-        #     self.centerDeviationUnobservableTimes = 0
+        if centerDeviation is None:
+            centerDeviation = self.lastCenterDeviation
+            self.centerDeviationUnobservableTimes += 1
+        else:
+            self.centerDeviationUnobservableTimes = 0
         if speed_after <= 1e-2:
             self.zeroSpeedTimes += 1
         else:
             self.zeroSpeedTimes = 0
 
-        leftQueue_mean = leftQueue.mean()
-        rightQueue_mean = rightQueue.mean()
-        if leftQueue_mean <= 20.0/160.0 and rightQueue_mean <= 20.0/160.0:
+        if abs(centerDeviation) >= 0.6:
             self.continuousOffCourseTimes += 1
         else:
             self.continuousOffCourseTimes = 0
 
-        ratio = 0.0
-        if leftQueue_mean >= 1e-3 and rightQueue_mean >= 1e-3:
-            ratio = 1 - rightQueue_mean/leftQueue_mean
-        elif leftQueue_mean >= 1e-3 and rightQueue_mean < 1e-3: # only left is observed
-            ratio = leftQueue_mean/2.0
-        elif leftQueue_mean < 1e-3 and rightQueue_mean >= 1e-3: # only right is observed
-            ratio = rightQueue_mean/2.0
         # centerDeviation = 0.0
         # assert centerDeviation != None
         # observation = np.array([centerDeviation, steering_angle_after, throttle_after, speed_after])
-        observation = np.concatenate([leftQueue, rightQueue, np.array([steering_angle_after, throttle_after, speed_after])])
+        observation = np.array([centerDeviation, steering_angle_after, throttle_after, speed_after])
         self.lastObservation = observation
-        # self.lastCenterDeviation = centerDeviation
+        self.lastCenterDeviation = centerDeviation
         self.lastSteeringAngle = steering_angle_after
 
         # calculate reward
-        # reward = speed_after - abs(centerDeviation)
-        if leftQueue_mean >= 1e-3 and rightQueue_mean >= 1e-3:
-            if leftQueue_mean >= rightQueue_mean:
-                reward = speed_after + rightQueue_mean/leftQueue_mean
-            else:
-                reward = speed_after + leftQueue_mean/rightQueue_mean
-        elif leftQueue_mean >= 1e-3 and rightQueue_mean < 1e-3: # only left is observed
-            reward = speed_after + leftQueue_mean/2.0
-        elif leftQueue_mean < 1e-3 and rightQueue_mean >= 1e-3: # only right is observed
-            reward = speed_after + rightQueue_mean/2.0
-        else:
-            reward = speed_after
+        reward = speed_after - abs(centerDeviation)
+        # if leftQueue_mean >= 1e-3 and rightQueue_mean >= 1e-3:
+        #     if leftQueue_mean >= rightQueue_mean:
+        #         reward = speed_after + rightQueue_mean/leftQueue_mean
+        #     else:
+        #         reward = speed_after + leftQueue_mean/rightQueue_mean
+        # elif leftQueue_mean >= 1e-3 and rightQueue_mean < 1e-3: # only left is observed
+        #     reward = speed_after + leftQueue_mean/2.0
+        # elif leftQueue_mean < 1e-3 and rightQueue_mean >= 1e-3: # only right is observed
+        #     reward = speed_after + rightQueue_mean/2.0
+        # else:
+        #     reward = speed_after
 
         # check done
-        # if self.centerDeviationUnobservableTimes >= 10:
-        #     isDone = True
-        #     reward = collideReward
-        if self.continuousOffCourseTimes >= 5:
+        if self.centerDeviationUnobservableTimes >= 10:
+            isDone = True
+            reward = collideReward
+        if self.continuousOffCourseTimes >= 8:
             print("offCourse!!!")
             isDone = True
             reward = collideReward

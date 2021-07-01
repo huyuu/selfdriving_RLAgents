@@ -92,9 +92,9 @@ if __name__ == '__main__':
     gradient_descent_count = 0
     gamma = 0.95
     episodes_amount_needed_for_one_decent = 5
-    entropy_beta = 1.0
+    entropy_beta = 0.1
 
-    while running_reward < 2000:  # Run until solved
+    while running_reward < 3000:  # Run until solved
         episode_count_in_single_descent = 1
         with tf.GradientTape() as tape:
             while episode_count_in_single_descent <= episodes_amount_needed_for_one_decent:
@@ -172,10 +172,10 @@ if __name__ == '__main__':
                 # high rewards (compared to critic's estimate) with high probability.
                 log_prob = tf.math.log(prob)
                 policy_loss = -log_prob * ret
-                entropy_loss = ( prob * log_prob) * entropy_beta
+                # entropy_loss = ( prob * log_prob) * entropy_beta
                 # print(f"policy_loss: {policy_loss}")
                 # print(f"entropy_loss: {entropy_loss}")
-                actor_losses.append(policy_loss + entropy_loss)  # actor loss
+                actor_losses.append(policy_loss)  # actor loss
 
             # Backpropagation
             loss_value = sum(actor_losses)

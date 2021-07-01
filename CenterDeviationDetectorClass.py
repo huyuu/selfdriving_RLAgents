@@ -12,7 +12,7 @@ class CenterDeviationDetector():
 
     def __init__(self):
         self.bottomAcceptableMargin = 20
-        self.queueElementAmount = 1
+        self.queueElementAmount = 3
         self.leftQueue = nu.ones(self.queueElementAmount, dtype=nu.float)
         self.rightQueue = nu.ones(self.queueElementAmount, dtype=nu.float)
 
@@ -22,6 +22,7 @@ class CenterDeviationDetector():
     def resetQueue(self):
         self.leftQueue = nu.ones(self.queueElementAmount, dtype=nu.float)
         self.rightQueue = nu.ones(self.queueElementAmount, dtype=nu.float)
+        pass
 
 
     def getCenterDeviation(self, image_origin):
@@ -55,14 +56,23 @@ class CenterDeviationDetector():
                 right = min(possibleRight, right)
 
         if right == 320:
-            right = 160
+            right = 240
         right_normalized = (right - 160) / 160.0
         self.rightQueue = nu.insert(self.rightQueue, 0, right_normalized)[:-1]
         if left == 0:
-            left = 160
+            left = 80
         left_normalized = (160 - left) / 160.0
         self.leftQueue = nu.insert(self.leftQueue, 0, left_normalized)[:-1]
-        return self.leftQueue, self.rightQueue
+
+        leftQueue_mean = self.leftQueue.mean()
+        rightQueue_mean = self.rightQueue.mean()
+        roadCenter = (right + left)/2
+        roadHalfWidth = (right - left)/2
+        if roadHalfWidth >= 1e-2:
+            gap = (160 - roadCenter) / roadHalfWidth
+            return leftQueue_mean, rightQueue_mean, gap
+        else:
+            return leftQueue_mean, rightQueue_mean, None
 
         # for countour in countours:
         #     x = countour[0][0][0]
@@ -138,12 +148,12 @@ class CenterDeviationDetector():
                 right = min(possibleRight, right)
 
         if right == 320:
-            right = 160
+            right = 240
         # else:
         #     right_normalized = (right - 160) / 100
         self.rightQueue = nu.insert(self.rightQueue, 0, right)[:-1]
         if left == 0:
-            left = 160
+            left = 80
         # else:
         #     left_normalized = (160 - left) / 100.0
         self.leftQueue = nu.insert(self.leftQueue, 0, left)[:-1]
@@ -153,6 +163,7 @@ class CenterDeviationDetector():
         # # Image center color_blue
         cv2.circle(image_edge, (int(self.leftQueue.mean()), height-self.bottomAcceptableMargin),5,(255,0,0),thickness=3)
         cv2.circle(image_edge, (int(self.rightQueue.mean()), height-self.bottomAcceptableMargin),5,(255,0,0),thickness=3)
+        cv2.circle(image_edge, (int((self.rightQueue.mean()+self.leftQueue.mean())/2), height-self.bottomAcceptableMargin),5,(255,0,0),thickness=3)
         # The center of the road  color_red
         # cv2.circle(image_edge, (int(roadCenter),height-5),5,(255,0,0),thickness=3)
         cv2.circle(image_edge, (160,int(height-self.bottomAcceptableMargin)),5,(255,0,0),thickness=2)
