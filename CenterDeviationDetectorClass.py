@@ -204,6 +204,7 @@ class CenterDeviationDetector():
             image_plot = pl.imshow(image, cmap='gray')
             plottingImages.append([image_plot])
         ani = animation.ArtistAnimation(fig, plottingImages, interval=50)
+        ani.save("center.gif")
         pl.show()
 
 
