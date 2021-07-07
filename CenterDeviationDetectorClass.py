@@ -11,7 +11,7 @@ class CenterDeviationDetector():
     # Initializer
 
     def __init__(self):
-        self.bottomAcceptableMargin = 20
+        self.bottomAcceptableMargin = 30
         self.queueElementAmount = 3
         self.leftQueue = nu.ones(self.queueElementAmount, dtype=nu.float)
         self.rightQueue = nu.ones(self.queueElementAmount, dtype=nu.float)
@@ -26,24 +26,30 @@ class CenterDeviationDetector():
 
 
     def getCenterDeviation(self, image_origin):
-        y_start = 40
-        height = 70
+        y_start = 50
+        height = 60
         y_end = y_start+height
         image_trimmed = image_origin[y_start: y_end, 0: 320]
-        image_blurred = cv2.bilateralFilter(image_trimmed, 5, 200, 200)
+        image_blurred = cv2.bilateralFilter(image_trimmed, 3, 100, 100)
+        image_blurred[-self.bottomAcceptableMargin:, 80: 240, :] = cv2.bilateralFilter(image_blurred[-self.bottomAcceptableMargin:, 80: 240, :], 5, 200, 200)
         image_gray = cv2.cvtColor(image_blurred, cv2.COLOR_RGB2GRAY)
+        # image_trimmed = image_origin[y_start: y_end, 0: 320]
+        # image_blurred = cv2.bilateralFilter(image_trimmed, 5, 200, 200)
+        # image_gray = cv2.cvtColor(image_blurred, cv2.COLOR_RGB2GRAY)
         # image_gray = cv2.cvtColor(image_trimmed,cv2.COLOR_RGB2GRAY)
         # dst = cv2.fastNlMeansDenoising(image_trimmed,h=20)
         # image_edge = cv2.Canny(dst, 150, 200)
-        image_edge = cv2.Canny(image_gray, 150, 350)
+        image_edge = cv2.Canny(image_gray, 140, 350)
 
-        left = 0
-        right = 320
+        left = 20
+        right = 300
         gap = None
         countours, hierarchy = cv2.findContours(image_edge, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         for countour in countours:
             countour = countour[:, 0, :]
             xs_bottom = countour[countour[:, 1] > height - self.bottomAcceptableMargin, 0]
+            # xs_bottom = countour[countour[:, 1] > height - self.bottomAcceptableMargin, 0]
+            # xs_bottom = countour[countour[:, 1] > height - self.bottomAcceptableMargin, 0]
             if len(xs_bottom) == 0:
                 continue
             possibleLefts = xs_bottom[xs_bottom < 160]
@@ -55,20 +61,21 @@ class CenterDeviationDetector():
                 possibleRight = possibleRights.min()
                 right = min(possibleRight, right)
 
-        if right == 320:
-            right = 240
-        right_normalized = (right - 160) / 160.0
-        self.rightQueue = nu.insert(self.rightQueue, 0, right_normalized)[:-1]
-        if left == 0:
-            left = 80
-        left_normalized = (160 - left) / 160.0
-        self.leftQueue = nu.insert(self.leftQueue, 0, left_normalized)[:-1]
+        if right == 300:
+            right = int(320-140)
+        # right_normalized = (right - 160) / 160.0
+        self.rightQueue = nu.insert(self.rightQueue, 0, right)[:-1]
+        # print(f"rightQueue: {self.rightQueue}")
+        if left == 20:
+            left = 140
+        # left_normalized = (160 - left) / 160.0
+        self.leftQueue = nu.insert(self.leftQueue, 0, left)[:-1]
 
         leftQueue_mean = self.leftQueue.mean()
         rightQueue_mean = self.rightQueue.mean()
-        roadCenter = (right + left)/2
-        roadHalfWidth = (right - left)/2
-        if roadHalfWidth >= 1e-2:
+        roadCenter = (rightQueue_mean + leftQueue_mean)/2
+        roadHalfWidth = (rightQueue_mean - leftQueue_mean)/2
+        if abs(160 - roadCenter) >= 1e-2:
             gap = (160 - roadCenter) / roadHalfWidth
             return leftQueue_mean, rightQueue_mean, gap
         else:
@@ -92,19 +99,24 @@ class CenterDeviationDetector():
     # MAKR: - Private Methods
 
     def getCenterDeviationWithImage(self, image_origin):
-        y_start = 40
-        height = 70
+        y_start = 50
+        height = 60
         y_end = y_start+height
         image_trimmed = image_origin[y_start: y_end, 0: 320]
-        image_blurred = cv2.bilateralFilter(image_trimmed, 5, 200, 200)
+        image_blurred = cv2.bilateralFilter(image_trimmed, 3, 100, 100)
+        # image_blurred = image_trimmed
+        image_blurred[-self.bottomAcceptableMargin:, 80: 240, :] = cv2.bilateralFilter(image_blurred[-self.bottomAcceptableMargin:, 80: 240, :], 5, 200, 200)
         image_gray = cv2.cvtColor(image_blurred, cv2.COLOR_RGB2GRAY)
+        # image_trimmed = image_origin[y_start: y_end, 0: 320]
+        # image_blurred = cv2.bilateralFilter(image_trimmed, 5, 200, 200)
+        # image_gray = cv2.cvtColor(image_blurred, cv2.COLOR_RGB2GRAY)
         # image_gray = cv2.cvtColor(image_trimmed,cv2.COLOR_RGB2GRAY)
         # dst = cv2.fastNlMeansDenoising(image_trimmed,h=20)
         # image_edge = cv2.Canny(dst, 150, 200)
-        image_edge = cv2.Canny(image_gray, 150, 300)
+        image_edge = cv2.Canny(image_gray, 140, 350)
 
-        left = 0
-        right = 320
+        left = 20
+        right = 300
         gap = None
         # lines = cv2.HoughLinesP(image_edge, rho=1, theta=nu.pi/360, threshold=50, minLineLength=50, maxLineGap=5)
         # if lines is not None:
@@ -147,13 +159,13 @@ class CenterDeviationDetector():
                 possibleRight = possibleRights.min()
                 right = min(possibleRight, right)
 
-        if right == 320:
-            right = 240
+        if right == 300:
+            right = int(320-140)
         # else:
         #     right_normalized = (right - 160) / 100
         self.rightQueue = nu.insert(self.rightQueue, 0, right)[:-1]
-        if left == 0:
-            left = 80
+        if left == 20:
+            left = 140
         # else:
         #     left_normalized = (160 - left) / 100.0
         self.leftQueue = nu.insert(self.leftQueue, 0, left)[:-1]

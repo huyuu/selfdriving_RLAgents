@@ -11,7 +11,7 @@ from datetime import datetime
 from gym.envs.registration import register
 
 from SimulatorDriverClass import SimulatorDriver
-from ProcessedImageEnvironmentClass import ProcessedImageEnvironment
+from GapEnvironmentClass import GapEnvironment
 from FixPolicyEnvironmentClass import FixPolicyEnvironment
 
 # Reference: https://keras.io/examples/rl/actor_critic_cartpole/
@@ -20,8 +20,8 @@ register(
     entry_point='FixPolicyEnvironmentClass:FixPolicyEnvironment'
 )
 register(
-    id='ProcessedImage-v0',
-    entry_point='ProcessedImageEnvironmentClass:ProcessedImageEnvironment'
+    id='Gap-v0',
+    entry_point='GapEnvironmentClass:GapEnvironment'
 )
 
 if __name__ == '__main__':
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     # env = gym.make("CartPole-v0")  # Create the environment
     # env.seed(seed)
     # env = FixPolicyEnvironment()
-    env = gym.make('ProcessedImage-v0')
+    env = gym.make('Gap-v0')
     eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 
 
@@ -83,7 +83,7 @@ if __name__ == '__main__':
 
     # MARK: - Training
 
-    optimizer = keras.optimizers.Adam(learning_rate=1e-3)
+    optimizer = keras.optimizers.Adam(learning_rate=2e-3)
     huber_loss = keras.losses.Huber()
     action_probs_history = []
     rewards_history = []

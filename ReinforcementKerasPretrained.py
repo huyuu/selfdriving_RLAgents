@@ -11,7 +11,7 @@ from datetime import datetime
 from gym.envs.registration import register
 
 from SimulatorDriverClass import SimulatorDriver
-from ProcessedImageEnvironmentClass import ProcessedImageEnvironment
+from GapEnvironmentClass import GapEnvironment
 from FixPolicyEnvironmentClass import FixPolicyEnvironment
 from pretrainModelFunc import pretrainModel
 
@@ -21,8 +21,8 @@ register(
     entry_point='FixPolicyEnvironmentClass:FixPolicyEnvironment'
 )
 register(
-    id='ProcessedImage-v0',
-    entry_point='ProcessedImageEnvironmentClass:ProcessedImageEnvironment'
+    id='Gap-v0',
+    entry_point='GapEnvironmentClass:GapEnvironment'
 )
 
 if __name__ == '__main__':
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     # env = gym.make("CartPole-v0")  # Create the environment
     # env.seed(seed)
     # env = FixPolicyEnvironment()
-    env = gym.make('ProcessedImage-v0')
+    env = gym.make('Gap-v0')
     eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 
 
@@ -73,6 +73,13 @@ if __name__ == '__main__':
         model = keras.models.load_model(modelPath)
     else:
         model = keras.Model(inputs=inputs, outputs=action)
+    recordsPath = f"{modelDirPath}/record.pickle"
+    records = []
+    running_reward = 0.0
+    if os.path.exists(recordsPath):
+        with open(recordsPath, "rb") as file:
+            records = pickle.load(file)
+            running_reward = records[-1][2]
 
     # Pretraining:
 
@@ -90,9 +97,7 @@ if __name__ == '__main__':
     rewards_history = []
     discounted_rewards_history = []
     correct_action_history = []
-    running_reward = 0
     gradient_descent_count = 0
-    records = []
     gamma = 0.95
     episodes_amount_needed_for_one_decent = 5
     entropy_beta = 1.0
@@ -127,7 +132,7 @@ if __name__ == '__main__':
                     state_new, reward, done, myAction = env.step(action)
 
                     # print(f"{datetime.now()}: center-d: {state[0]}, speed: {state[3]}, myAction = {myAction}, reward = {reward}", action_probs[0])
-                    print(f"{datetime.now()}: state: {state_old[0]}, action_probs: {action_probs}, action: {action}, myAction: {myAction}, reward = {reward}")
+                    print(f"state: {state_old[0]}, action: {action}, reward = {reward}")
                     rewards_history.append(reward)
                     episode_reward += reward
                     state_old = state_new
@@ -188,8 +193,6 @@ if __name__ == '__main__':
             optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
             records.append([gradient_descent_count, episode_reward, running_reward, loss_value])
-            with open(f"{modelDirPath}/record.pickle", "wb") as file:
-                pickle.dump(records, file)
 
             # Clear the loss and reward history
             action_probs_history.clear()
@@ -202,5 +205,7 @@ if __name__ == '__main__':
         gradient_descent_count += 1
         if gradient_descent_count % 1 == 0:
             model.save(modelPath)
+            with open(recordsPath, "wb") as file:
+                pickle.dump(records, file)
             print(f"episode {gradient_descent_count}: reward = {episode_reward}")
             # print("running reward: {:.2f} at episode {}".format(running_reward, gradient_descent_count))

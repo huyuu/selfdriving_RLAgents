@@ -53,23 +53,27 @@ if __name__ == '__main__':
     # action = layers.Dense(num_actions, activation="softmax", name='action')(common2)
 
     image_inputs = layers.Input(shape=env.observation_spec['image']['shape'], dtype=np.float, name='image')
-    image_conv1 = layers.Conv2D(filters=32, kernel_size=8, strides=(4, 4), activation='relu', name='image_conv1')(image_inputs)
-    image_conv2 = layers.Conv2D(filters=32, kernel_size=8, strides=(4, 4), activation='relu', name='image_conv2')(image_conv1)
-    image_conv3 = layers.Conv2D(filters=32, kernel_size=8, strides=(4, 4), activation='relu', name='image_conv3')(image_conv2)
-    image_flattened = layers.Flatten(name='flattened')(image_conv3)
-    image_dense1 = layers.Dense(64, activation='relu', name='common_dense1')(image_flattened)
-    image_dense2 = layers.Dense(4, activation='relu', name='common_dense2')(image_dense1)
+    image_layer = kr.layers.Conv2D(filters=64, kernel_size=4, strides=(2, 2), activation='relu', name='image_conv1')(image_inputs)
+    image_layer = kr.layers.MaxPooling2D(pool_size=(4,4))(image_layer)
+    image_layer = kr.layers.Conv2D(filters=64, kernel_size=3, strides=(1, 1), activation='relu', name='image_conv2')(image_layer)
+    image_layer = kr.layers.MaxPooling2D(pool_size=(4,4))(image_layer)
+    image_layer = kr.layers.Conv2D(filters=128, kernel_size=3, strides=(1, 1), activation='relu', name='image_conv3')(image_layer)
+    image_layer = kr.layers.MaxPooling2D(pool_size=(2,2))(image_layer)
+    image_layer = kr.layers.Flatten(name='flattened')(image_layer)
+    # image_layer = kr.layers.Dense(256, activation='relu', name='image_dense1')(image_layer)
+    image_layer = kr.layers.Dense(64, activation='relu', name='image_dense2')(image_layer)
+    image_layer = kr.layers.Dense(1, activation='tanh', name='image_dense3')(image_layer)
 
     subPara_inputs = layers.Input(shape=env.observation_spec['subPara']['shape'], dtype=np.float, name='subPara')
-    subPara_dense = layers.Dense(4, activation='relu', name='subPara_dense')(subPara_inputs)
 
-    common = layers.concatenate([image_dense2, subPara_dense])
-
-    action_dense1 = layers.Dense(8, activation="relu", name='action_dense1')(common)
+    common = layers.concatenate([image_dense2, subPara_inputs])
+    common = layers.Dense(128, activation="relu", name='common_dense1')(common)
+    common = layers.Dense(128, activation="relu", name='common_dense1')(common)
     num_actions = env.action_spec['shape'][0]
-    action = layers.Dense(num_actions, activation="softmax", name='action_dense2')(action_dense1)
+    action = layers.Dense(num_actions, activation="softmax", name='common_output')(common)
 
 
+    # if exitst, load previous model
     model = None
     modelDirPath = './savedModels/ReinforcementKeras_rawImage'
     if not os.path.isdir(modelDirPath):
@@ -79,6 +83,13 @@ if __name__ == '__main__':
         model = keras.models.load_model(modelPath)
     else:
         model = keras.Model(inputs=[image_inputs, subPara_inputs], outputs=action)
+        # if no previous model, copy weights from DLAgent
+        dlModelPath = '../DLAgents/continuousModel_rawImage.h5'
+        if os.path.exists(dlModelPath):
+            dlModel = keras.models.load_model(dlModelPath)
+            for layerIndex in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
+                model.layers[layerIndex].set_weights(dlModel.layers[layerIndex].get_weights())
+
     recordsPath = f"{modelDirPath}/record.pickle"
     records = []
     running_reward = 0.0

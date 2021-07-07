@@ -59,9 +59,9 @@ def getExperience(env, episods=10):
         while not isDone:
             # choose action by fixed policy
             action = 0
-            if abs(observation_old[0]) <= 0.2:
+            if abs(observation_old[0]) <= 0.3:
                 action = 2
-            elif observation_old[0] > 0.2:
+            elif observation_old[0] > 0.3:
                 action = 0
             else:
                 action = 1
